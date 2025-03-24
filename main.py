@@ -38,6 +38,10 @@ async def send_telegram_message(bot, chat_id, eintrag):
         ]
         reply_markup = InlineKeyboardMarkup(buttons)
 
+        # Debugging-Ausgabe der Chat-ID
+        logger.info(f"🚨 Chat-ID: {chat_id} – Nachricht wird gesendet...")
+
+        # Telegram-Nachricht senden
         await bot.send_message(
             chat_id=chat_id,
             text=text,
@@ -68,7 +72,8 @@ async def main():
         logger.error("Bot-Token oder Chat-ID fehlen.")
         return
 
-    logger.info(f"🚨 Chat-ID: {chat_id}")  # Chat-ID im Log ausgeben
+    # Logge die Chat-ID zur Überprüfung
+    logger.info(f"🚨 Chat-ID: {chat_id}")
 
     # Bot und Application initialisieren
     bot = Bot(token=token)
