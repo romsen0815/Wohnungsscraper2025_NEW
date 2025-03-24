@@ -1,6 +1,7 @@
 import os
 import telegram
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.constants import ParseMode
 from scrapers.willhaben import scrape_willhaben
 from scrapers.immowelt import scrape_immowelt
 from scrapers.immo_at import scrape_immo_at
@@ -24,7 +25,7 @@ def send_telegram_message(bot, chat_id, eintrag):
     ]
     reply_markup = InlineKeyboardMarkup(buttons)
 
-    bot.send_message(chat_id=chat_id, text=text, parse_mode=telegram.ParseMode.MARKDOWN, reply_markup=reply_markup)
+bot.send_message(chat_id=chat_id, text=text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
 
 def remove_duplicates(entries):
     seen = set()
