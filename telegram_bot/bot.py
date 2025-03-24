@@ -1,8 +1,13 @@
 import os
 import json
+import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, CallbackContext
 from main import scrape_and_filter  # Importiere die Funktion aus main.py
+
+# Logging konfigurieren
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
@@ -24,10 +29,12 @@ filter_criteria = {
 }
 
 def start(update: Update, context: CallbackContext) -> None:
+    logger.debug("Start command received")
     context.bot.send_message(chat_id=update.effective_chat.id,
                              text="👋 Hallo Roman, ich bin dein Wohnungsscout-Bot! Verwende /setfilter <query> <price_from> <price_to> <estate_type> <area_id> <min_area> <max_area> <min_rooms> <max_rooms> <must_have_keywords> <must_not_have_keywords> <max_results> um die Suchkriterien zu setzen. Beispiel: /setfilter \"Wien Wohnung mieten\" 500 1500 \"Wohnung\" \"1010\" 50 150 2 4 \"Balkon,Garage\" \"Erdgeschoss\" 10")
 
 def set_filter(update: Update, context: CallbackContext) -> None:
+    logger.debug("Set filter command received with args: %s", context.args)
     if len(context.args) < 10:
         update.message.reply_text('Bitte verwende: /setfilter <query> <price_from> <price_to> <estate_type> <area_id> <min_area> <max_area> <min_rooms> <max_rooms> <must_have_keywords> <must_not_have_keywords> [max_results]')
         return
@@ -50,11 +57,14 @@ def set_filter(update: Update, context: CallbackContext) -> None:
 
     with open('config.json', 'w') as file:
         json.dump(filter_criteria, file)
+        logger.debug("Suchkriterien in config.json gespeichert: %s", filter_criteria)
 
     update.message.reply_text('Suchkriterien wurden aktualisiert und gespeichert!')
 
 def scrape_and_send(update: Update, context: CallbackContext) -> None:
+    logger.debug("Scrape and send command received")
     inserate = scrape_and_filter()  # Scraping-Funktion aus main.py
+    logger.debug("Scraping completed, found %d listings", len(inserate))
     for eintrag in inserate:
         send_telegram_message(context.bot, CHAT_ID, eintrag)
 
@@ -86,14 +96,16 @@ def send_telegram_message(bot, chat_id, eintrag):
         bot.send_message(
             chat_id=chat_id,
             text=text,
-            parse_mode=ParseMode.MARKDOWN,
+            parse_mode='Markdown',
             reply_markup=reply_markup,
             disable_web_page_preview=True
         )
+        logger.debug("Nachricht gesendet: %s", text)
     except Exception as e:
-        print(f"⚠️ Fehler beim Senden der Telegram-Nachricht: {e}")
+        logger.error("Fehler beim Senden der Telegram-Nachricht: %s", e)
 
 def main() -> None:
+    logger.debug("Bot startet")
     updater = Updater(token=TELEGRAM_BOT_TOKEN, use_context=True)
     dispatcher = updater.dispatcher
 
