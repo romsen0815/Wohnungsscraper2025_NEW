@@ -69,6 +69,7 @@ def scrape_and_send(update: Update, context: CallbackContext) -> None:
     inserate = scrape_and_filter()  # Scraping-Funktion aus main.py
     logger.debug("Scraping completed, found %d listings", len(inserate))
     for eintrag in inserate:
+        logger.debug(f"Sending listing: {eintrag}")
         send_telegram_message(context.bot, TELEGRAM_CHAT_ID, eintrag)
 
 def send_telegram_message(bot, chat_id, eintrag):
