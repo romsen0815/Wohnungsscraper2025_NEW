@@ -14,6 +14,15 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
                     level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Aktuelle Filterkriterien als globale Variablen
+filter_criteria = {
+    "min_qm": 40,
+    "max_price": 1000,
+    "districts": [1020, 1070, 1080, 1050],
+    "must_have_keywords": ["Altbau", "Balkon", "Terrasse", "ruhig"],
+    "ignore_keywords": ["Untermiete", "befristet", "WG-Zimmer"]
+}
+
 # Start-Befehl definieren
 async def start(update, context):
     await update.message.reply_text('Hallo! Ich bin dein Immobilien-Bot.')
@@ -21,11 +30,16 @@ async def start(update, context):
 # Funktion zum Senden von Nachrichten
 async def send_telegram_message(bot, chat_id, eintrag):
     try:
+        # URL sicherstellen, dass sie mit http:// oder https:// beginnt
+        link = eintrag.get('link', '')
+        if not link.startswith('http'):
+            link = 'https://' + link  # Falls kein http:// oder https:// vorangestellt ist
+
         text = (
             f"🏠 *{eintrag['titel']}*\n"
             f"📍 {eintrag['ort']}\n"
             f"💰 {eintrag['preis']}\n"
-            f"🔗 [Zum Inserat]({eintrag['link']})\n"
+            f"🔗 [Zum Inserat]({link})\n"  # Korrekte URL Formatierung
             f"🟢 Plattform: {eintrag['plattform']}"
         )
 
@@ -52,13 +66,16 @@ async def send_telegram_message(bot, chat_id, eintrag):
     except Exception as e:
         logger.error(f"⚠️ Fehler beim Senden der Telegram-Nachricht: {e}")
 
+
 # Funktion zum Entfernen von Duplikaten
 def remove_duplicates(entries):
     seen = set()
     unique = []
     for e in entries:
-        if e.get('link') and e['link'] not in seen:
-            seen.add(e['link'])
+        # Duplikate filtern, basierend auf der Kombination von link und platform
+        identifier = (e.get('link'), e.get('plattform'))
+        if identifier not in seen:
+            seen.add(identifier)
             unique.append(e)
     return unique
 
@@ -72,7 +89,6 @@ async def main():
         logger.error("Bot-Token oder Chat-ID fehlen.")
         return
 
-    # Logge die Chat-ID zur Überprüfung
     logger.info(f"🚨 Chat-ID: {chat_id}")
 
     # Bot und Application initialisieren
@@ -86,7 +102,7 @@ async def main():
     daten += scrape_immo_at()
     daten += scrape_scout24()
 
-    # Duplikate entfernen
+    # Duplikate entfernen, aber alle Inserate beibehalten, die relevant sind
     unique = remove_duplicates(daten)
     logger.info(f"📦 {len(unique)} einzigartige Inserate gefunden")
 
