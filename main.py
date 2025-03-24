@@ -2,13 +2,14 @@ import os
 import telegram
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
+import asyncio
 
 from scrapers.willhaben import scrape_willhaben
 from scrapers.immowelt import scrape_immowelt
 from scrapers.immo_at import scrape_immo_at
 from scrapers.scout24 import scrape_scout24
 
-def send_telegram_message(bot, chat_id, eintrag):
+async def send_telegram_message(bot, chat_id, eintrag):
     try:
         text = (
             f"🏠 *{eintrag['titel']}*\n"
@@ -27,7 +28,7 @@ def send_telegram_message(bot, chat_id, eintrag):
         ]
         reply_markup = InlineKeyboardMarkup(buttons)
 
-        bot.send_message(
+        await bot.send_message(
             chat_id=chat_id,
             text=text,
             parse_mode=ParseMode.MARKDOWN,
@@ -46,7 +47,7 @@ def remove_duplicates(entries):
             unique.append(e)
     return unique
 
-def main():
+async def main():
     print("🔍 Starte Scraper für alle Plattformen...")
     try:
         daten = []
@@ -69,10 +70,10 @@ def main():
 
         for eintrag in unique:
             print(f"📤 Sende: {eintrag['titel']} – {eintrag['plattform']}")
-            send_telegram_message(bot, chat_id, eintrag)
+            await send_telegram_message(bot, chat_id, eintrag)
 
     except Exception as err:
         print(f"🚨 Allgemeiner Fehler: {err}")
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
