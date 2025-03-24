@@ -52,20 +52,14 @@ async def send_telegram_message(bot, chat_id, eintrag):
             link = 'https://' + link
 
         text = (
-            f"🏠 *{eintrag['titel']}*
-"
-            f"📍 {eintrag['ort']}
-"
-            f"💰 {eintrag['preis']}
-"
-            f"📏 {eintrag.get('qm', 'Keine Angabe')} m²
-"
-            f"🛏️ {eintrag.get('zimmer', 'Keine Angabe')} Zimmer
-"
-            f"🔗 [Zum Inserat]({link})
-"
-            f"🟢 Plattform: {eintrag['plattform']}"
-        )
+    f"🏠 *{eintrag['titel']}*\n"
+    f"📍 {eintrag['ort']}\n"
+    f"💰 {eintrag['preis']}\n"
+    f"📏 {eintrag.get('qm', 'Keine Angabe')} m²\n"
+    f"🛏️ {eintrag.get('zimmer', 'Keine Angabe')} Zimmer\n"
+    f"🔗 [Zum Inserat]({link})\n"  # Hier wird der Link zum Inserat eingefügt
+    f"🟢 Plattform: {eintrag['plattform']}"
+)
 
         buttons = [
             [
