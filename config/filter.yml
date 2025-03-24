@@ -1,0 +1,5 @@
+min_qm: 40
+max_price: 1000
+districts: [1020, 1070, 1080, 1050]
+must_have_keywords: ["Altbau", "Balkon", "Terrasse", "ruhig"]
+ignore_keywords: ["Untermiete", "befristet", "WG-Zimmer"]
