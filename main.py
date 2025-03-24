@@ -40,4 +40,3 @@ def scrape_and_filter():
     logger.debug("Einzigartige Inserate gefunden: %d", len(unique))
 
     return unique
-    
