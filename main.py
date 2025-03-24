@@ -7,15 +7,13 @@ from scrapers.immo_at import scrape_immo_at
 from scrapers.scout24 import scrape_scout24
 
 def send_telegram_message(bot, chat_id, eintrag):
-    text = f"🏠 *{eintrag['titel']}*
-"
-    text += f"📍 {eintrag['ort']}
-"
-    text += f"💰 {eintrag['preis']}
-"
-    text += f"🔗 [Zum Inserat]({eintrag['link']})
-"
-    text += f"🟢 Plattform: {eintrag['plattform']}"
+    text = (
+        f"🏠 *{eintrag['titel']}*\n"
+        f"📍 {eintrag['ort']}\n"
+        f"💰 {eintrag['preis']}\n"
+        f"🔗 [Zum Inserat]({eintrag['link']})\n"
+        f"🟢 Plattform: {eintrag['plattform']}"
+    )
 
     buttons = [
         [
