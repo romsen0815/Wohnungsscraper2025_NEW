@@ -1,6 +1,6 @@
 import os
 import json
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, CallbackContext
 from main import scrape_and_filter  # Importiere die Funktion aus main.py
 
