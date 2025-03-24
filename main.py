@@ -1,8 +1,9 @@
 import os
 import logging
-from telegram import Bot, Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler
+from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
+import asyncio
+
 from scrapers.willhaben import scrape_willhaben
 from scrapers.immowelt import scrape_immowelt
 from scrapers.immo_at import scrape_immo_at
@@ -14,35 +15,38 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 
 # Start-Befehl definieren
-async def start(update: Update, context):
+async def start(update, context):
     await update.message.reply_text('Hallo! Ich bin dein Immobilien-Bot.')
 
 # Funktion zum Senden von Nachrichten
-async def send_telegram_message(bot: Bot, chat_id: int, eintrag: dict):
-    text = (
-        f"🏠 *{eintrag['titel']}*\n"
-        f"📍 {eintrag['ort']}\n"
-        f"💰 {eintrag['preis']}\n"
-        f"🔗 [Zum Inserat]({eintrag['link']})\n"
-        f"🟢 Plattform: {eintrag['plattform']}"
-    )
+async def send_telegram_message(bot, chat_id, eintrag):
+    try:
+        text = (
+            f"🏠 *{eintrag['titel']}*\n"
+            f"📍 {eintrag['ort']}\n"
+            f"💰 {eintrag['preis']}\n"
+            f"🔗 [Zum Inserat]({eintrag['link']})\n"
+            f"🟢 Plattform: {eintrag['plattform']}"
+        )
 
-    buttons = [
-        [
-            InlineKeyboardButton("✅ Anfrage senden", callback_data="anfrage"),
-            InlineKeyboardButton("✏️ Nachricht bearbeiten", callback_data="bearbeiten"),
-            InlineKeyboardButton("❌ Ignorieren", callback_data="ignorieren"),
+        buttons = [
+            [
+                InlineKeyboardButton("✅ Anfrage senden", callback_data="anfrage"),
+                InlineKeyboardButton("✏️ Nachricht bearbeiten", callback_data="bearbeiten"),
+                InlineKeyboardButton("❌ Ignorieren", callback_data="ignorieren"),
+            ]
         ]
-    ]
-    reply_markup = InlineKeyboardMarkup(buttons)
+        reply_markup = InlineKeyboardMarkup(buttons)
 
-    await bot.send_message(
-        chat_id=chat_id,
-        text=text,
-        parse_mode=ParseMode.MARKDOWN,
-        reply_markup=reply_markup,
-        disable_web_page_preview=True
-    )
+        await bot.send_message(
+            chat_id=chat_id,
+            text=text,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=reply_markup,
+            disable_web_page_preview=True
+        )
+    except Exception as e:
+        logger.error(f"⚠️ Fehler beim Senden der Telegram-Nachricht: {e}")
 
 # Funktion zum Entfernen von Duplikaten
 def remove_duplicates(entries):
@@ -64,9 +68,10 @@ async def main():
         logger.error("Bot-Token oder Chat-ID fehlen.")
         return
 
+    logger.info(f"🚨 Chat-ID: {chat_id}")  # Chat-ID im Log ausgeben
+
     # Bot und Application initialisieren
     bot = Bot(token=token)
-    application = Application.builder().token(token).build()
 
     # Scraping durchführen
     logger.info("🔍 Starte Scraper für alle Plattformen...")
@@ -85,13 +90,5 @@ async def main():
         logger.info(f"📤 Sende: {eintrag['titel']} – {eintrag['plattform']}")
         await send_telegram_message(bot, chat_id, eintrag)
 
-    # Start-Befehl hinzufügen
-    application.add_handler(CommandHandler("start", start))
-
-    # Anwendung starten
-    await application.initialize()
-    await application.start_polling()
-
 if __name__ == "__main__":
-    import asyncio
     asyncio.run(main())
