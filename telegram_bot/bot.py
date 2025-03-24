@@ -10,7 +10,10 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+
+logger.debug(f"TELEGRAM_BOT_TOKEN: {TELEGRAM_BOT_TOKEN}")
+logger.debug(f"TELEGRAM_CHAT_ID: {TELEGRAM_CHAT_ID}")
 
 # Globale Filterkriterien
 filter_criteria = {
@@ -66,7 +69,7 @@ def scrape_and_send(update: Update, context: CallbackContext) -> None:
     inserate = scrape_and_filter()  # Scraping-Funktion aus main.py
     logger.debug("Scraping completed, found %d listings", len(inserate))
     for eintrag in inserate:
-        send_telegram_message(context.bot, CHAT_ID, eintrag)
+        send_telegram_message(context.bot, TELEGRAM_CHAT_ID, eintrag)
 
 def send_telegram_message(bot, chat_id, eintrag):
     try:
