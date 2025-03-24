@@ -4,6 +4,10 @@ from scrapers.willhaben import scrape_willhaben
 from scrapers.immowelt import scrape_immowelt
 from scrapers.scout24 import scrape_scout24
 
+# Logging konfigurieren
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 # Filterkriterien als globale Variablen
 filter_criteria = {
     "min_qm": 40,
@@ -26,14 +30,13 @@ def remove_duplicates(entries):
 
 # Scraping durchführen und Ergebnisse filtern
 def scrape_and_filter():
-    print("🔍 Starte Scraper für alle Plattformen...")
+    logger.debug("Starte Scraper für alle Plattformen...")
     daten = []
     daten += scrape_willhaben()
     daten += scrape_immowelt()
     daten += scrape_scout24()
 
     unique = remove_duplicates(daten)
-    print(f"📦 {len(unique)} einzigartige Inserate gefunden")
+    logger.debug("Einzigartige Inserate gefunden: %d", len(unique))
 
-    # Ergebnisse zurückgeben
     return unique
