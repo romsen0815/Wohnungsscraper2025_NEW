@@ -67,7 +67,20 @@ def scrape_and_filter():
     daten = []
     
     # Use default criteria for scraping
-    daten += scrape_willhaben()
+    daten += scrape_willhaben(
+        search_query=DEFAULT_CRITERIA["search_query"],
+        price_from=DEFAULT_CRITERIA["price_from"],
+        price_to=DEFAULT_CRITERIA["price_to"],
+        estate_type=DEFAULT_CRITERIA["estate_type"],
+        area_id=DEFAULT_CRITERIA["area_id"],
+        min_area=DEFAULT_CRITERIA["min_area"],
+        max_area=DEFAULT_CRITERIA["max_area"],
+        min_rooms=DEFAULT_CRITERIA["min_rooms"],
+        max_rooms=DEFAULT_CRITERIA["max_rooms"],
+        must_have_keywords=DEFAULT_CRITERIA["must_have_keywords"],
+        must_not_have_keywords=DEFAULT_CRITERIA["must_not_have_keywords"],
+        max_results=DEFAULT_CRITERIA["max_results"]
+    )
     
     logger.info("Daten von Willhaben: %d Einträge", len(daten))
     
@@ -101,4 +114,4 @@ def scrape_and_filter():
     return unique
 
 if __name__ == "__main__":
-    scrape_and_filter()v
+    daten = scrape_and_filter()
