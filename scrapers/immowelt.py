@@ -7,27 +7,48 @@ logger = logging.getLogger(__name__)
 def scrape_immowelt():
     url = 'https://www.immowelt.de/suche/berlin/haeuser/kaufen'
     
-    response = requests.get(url)
+    response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
     soup = BeautifulSoup(response.text, 'html.parser')
     
     results = []
-    for item in soup.find_all('div', class_='search-result-entry'):
-        title = item.find('h2', class_='result-list-entry__brand-title').text.strip()
-        location = item.find('div', class_='result-list-entry__address').text.strip()
-        price = item.find('div', class_='result-list-entry__criteria').text.strip()
-        size = item.find('div', class_='result-list-entry__criteria--area').text.strip()
-        rooms = item.find('div', class_='result-list-entry__criteria--rooms').text.strip()
-        link = item.find('a', class_='result-list-entry__brand-title-container')['href']
-        
-        results.append({
-            'title': title,
-            'location': location,
-            'price': price,
-            'size': size,
-            'rooms': rooms,
-            'link': link,
-            'plattform': 'Immowelt'
-        })
-    
+    listings = soup.select("div[data-test='object-listing']")
+
+    for item in listings:
+        try:
+            title_tag = item.select_one("h2")
+            title = title_tag.text.strip() if title_tag else "Keine Angabe"
+
+            link_tag = item.find("a", href=True)
+            link = link_tag["href"] if link_tag else ""
+
+            ort_tag = item.select_one("div[data-test='address']")
+            ort = ort_tag.text.strip() if ort_tag else "Keine Angabe"
+
+            preis_tag = item.select_one("div[data-test='price']")
+            preis = preis_tag.text.strip() if preis_tag else "Keine Angabe"
+
+            flaeche = "Keine Angabe"
+            zimmer = "Keine Angabe"
+            details = item.select("div[data-test='additional-info'] span")
+            for d in details:
+                txt = d.text.strip()
+                if "m²" in txt and flaeche == "Keine Angabe":
+                    flaeche = txt
+                elif "Zimmer" in txt and zimmer == "Keine Angabe":
+                    zimmer = txt
+
+            results.append({
+                "titel": title,
+                "ort": ort,
+                "preis": preis,
+                "qm": flaeche,
+                "zimmer": zimmer,
+                "link": link,
+                "plattform": "Immowelt"
+            })
+        except Exception as e:
+            logger.warning(f"Fehler beim Verarbeiten eines Immowelt-Eintrags: {e}")
+            continue
+
     logger.debug(f"Erfolgreich Daten von Immowelt abgerufen: {len(results)} Einträge")
     return results
