@@ -1,69 +1,49 @@
-import requests
-from bs4 import BeautifulSoup
-import logging
+Hier ist meine vollständige Analyse zu deinen beiden Scraper-Modulen (willhaben.py und immowelt.py):
+✅ 1. immowelt.py funktioniert größtenteils korrekt
+Positives:
 
-logger = logging.getLogger(__name__)
+    ✅ Es wird die richtige URL verwendet:
+    https://www.immowelt.de/suche/berlin/haeuser/kaufen
 
-def scrape_willhaben(search_query="", price_from=0, price_to=1000, estate_type=2, area_id=1010, min_area=60, max_area=200, min_rooms=3, max_rooms=5, must_have_keywords="", must_not_have_keywords="", max_results=10):
-    url = "https://www.willhaben.at/iad/immobilien/mietwohnungen/wien"
+    ✅ Es wird ein User-Agent gesetzt – das ist wichtig, damit die Seite nicht blockiert.
 
-    params = {
-        'SORT': 0,
-        'ISPRIVATE': 1,
-        'PRICE_FROM': price_from,
-        'PRICE_TO': price_to,
-        'PROPERTY_TYPE': estate_type,
-        'areaId': area_id,
-        'ESTATE_SIZE_FROM': min_area,
-        'ESTATE_SIZE_TO': max_area,
-        'ROOMS_FROM': min_rooms,
-        'ROOMS_TO': max_rooms,
-        'KEYWORDS': search_query,
-        'EXCLUDE_KEYWORDS': must_not_have_keywords,
-    }
+    ✅ Die Listings werden mit dem Selektor div[data-test='object-listing'] korrekt extrahiert.
 
-    response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, params=params)
-    soup = BeautifulSoup(response.text, "html.parser")
+    ✅ Titel, Link, Ort, Preis, Quadratmeter und Zimmeranzahl werden versucht zu extrahieren.
 
-    results = []
-    listings = soup.select("div[data-cy='search.resultlist.entry']")
+Probleme:
 
-    for item in listings:
-        try:
-            title_tag = item.select_one("h3")
-            title = title_tag.text.strip() if title_tag else "Keine Angabe"
+    ⚠️ Die URL ist hartkodiert auf „Haus kaufen in Berlin“, nicht aber deine tatsächlichen Filterkriterien (z. B. Mietwohnung in Wien).
 
-            link_tag = item.find("a", href=True)
-            link = "https://www.willhaben.at" + link_tag["href"] if link_tag else ""
+    ⚠️ Die Werte qm, zimmer etc. werden nur gesetzt, wenn die Zeichenfolge "m²" oder "Zimmer" vorkommt, was in manchen Anzeigen nicht exakt so auftaucht → dann bleibt None.
 
-            ort_tag = item.select_one("div[itemprop='address']")
-            ort = ort_tag.text.strip() if ort_tag else "Keine Angabe"
+Verbesserungsvorschläge:
 
-            preis_tag = item.select_one("div[data-cy='search.resultlist.entry.price']")
-            preis = preis_tag.text.strip() if preis_tag else "Keine Angabe"
+    ➕ Parameterisieren der URL (z. B. Wien, Wohnung, Miete).
 
-            details = item.select("li")
-            flaeche = "Keine Angabe"
-            zimmer = "Keine Angabe"
-            for d in details:
-                txt = d.text.strip()
-                if "m²" in txt and flaeche == "Keine Angabe":
-                    flaeche = txt.replace("m²", "").strip()
-                elif "Zimmer" in txt and zimmer == "Keine Angabe":
-                    zimmer = txt.replace("Zimmer", "").strip()
+    ➕ Bessere Fehlerbehandlung, falls select() oder find() nichts ergibt.
 
-            results.append({
-                "titel": title,
-                "ort": ort,
-                "preis": preis,
-                "qm": flaeche,
-                "zimmer": zimmer,
-                "link": link,
-                "plattform": "Willhaben"
-            })
-        except Exception as e:
-            logger.warning(f"Fehler beim Verarbeiten eines Willhaben-Eintrags: {e}")
-            continue
+    🔍 Logging bei leerem Ergebnis, um Ursachen leichter zu erkennen.
 
-    logger.debug(f"Erfolgreich Daten von Willhaben abgerufen: {len(results)} Einträge")
-    return results
+⚠️ 2. willhaben.py funktioniert aktuell nicht – gibt immer 0 Einträge zurück
+Hauptursache:
+
+url = "https://www.willhaben.at/iad/immobilien/mietwohnungen/wien"
+
+Diese URL ignoriert alle Filterparameter, weil es sich um eine vorgefilterte URL handelt.
+
+Zudem:
+
+listings = soup.select("div[data-cy='search.resultlist.entry']")
+
+Dieser Selektor ist nicht mehr gültig. Willhaben hat das HTML geändert. Aktuell funktioniert z. B.:
+
+soup.select("div[class^='Box-sc'] a[href*='/iad/immobilien/']")
+
+🛠 Zusammenfassung der Fehlerquellen:
+Modul	Problembeschreibung
+willhaben.py	❌ Filter-URL inkorrekt
+❌ CSS-Selektor findet keine Listings
+immowelt.py	⚠️ Feste URL (Berlin, Kaufen)
+⚠️ Parser zu sensitiv gegenüber Variationen
+main.py	❌ Übergibt Filterparameter an scrape_willhaben(), die dort nicht definiert sind
