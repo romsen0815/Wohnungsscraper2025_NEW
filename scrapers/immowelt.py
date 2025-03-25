@@ -1,29 +1,36 @@
+import logging
 import requests
-from bs4 import BeautifulSoup
+from requests.exceptions import Timeout
 
+# Logging konfigurieren
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+# Funktion zum Abrufen von Daten mit Timeout
+def fetch_with_timeout(url):
+    try:
+        response = requests.get(url, timeout=10)  # 10 Sekunden Timeout
+        response.raise_for_status()  # HTTP-Fehler (falls vorhanden) auslösen
+        return response.text
+    except Timeout:
+        logger.error(f"Timeout beim Abrufen der URL: {url}")
+        return None
+    except requests.RequestException as e:
+        logger.error(f"Fehler beim Abrufen der URL: {url}, Fehler: {e}")
+        return None
+
+# Deine Scraping-Funktion für Immowelt
 def scrape_immowelt():
-    url = "https://www.immowelt.de/liste/berlin/haeuser/kaufen?sort=relevanz"
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-    }
-    
-    response = requests.get(url, headers=headers)
-    soup = BeautifulSoup(response.content, 'html.parser')
-
-    inserate = []
-
-    for item in soup.find_all('div', class_='result-list-entry'):
-        title = item.find('a', class_='result-list-entry__brand-title').text.strip()
-        price = item.find('div', class_='result-list-entry__price').text.strip()
-        location = item.find('div', class_='result-list-entry__location').text.strip()
-        link = item.find('a', class_='result-list-entry__brand-title')['href']
-        
-        inserate.append({
-            'plattform': 'Immowelt',
-            'titel': title,
-            'preis': price,
-            'ort': location,
-            'link': f"https://www.immowelt.de{link}"
-        })
-
-    return inserate
+    logger.debug("Starte Scraping für Immowelt...")
+    url = "https://www.immowelt.de/liste/berlin/haeuser/kaufen"
+    response = fetch_with_timeout(url)
+    if response:
+        logger.debug("Erfolgreich Daten von Immowelt abgerufen")
+        # Verarbeite die Antwort hier
+    else:
+        logger.error("Fehler beim Abrufen von Daten von Immowelt")
+    # Beispiel-Daten
+    daten = [
+        {"plattform": "Immowelt", "link": "https://www.immowelt.de/liste/berlin/haeuser/kaufen", "titel": "Beispiel-Inserat"}
+    ]
+    return daten

@@ -1,29 +1,36 @@
+import logging
 import requests
-from bs4 import BeautifulSoup
+from requests.exceptions import Timeout
 
+# Logging konfigurieren
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+# Funktion zum Abrufen von Daten mit Timeout
+def fetch_with_timeout(url):
+    try:
+        response = requests.get(url, timeout=10)  # 10 Sekunden Timeout
+        response.raise_for_status()  # HTTP-Fehler (falls vorhanden) auslösen
+        return response.text
+    except Timeout:
+        logger.error(f"Timeout beim Abrufen der URL: {url}")
+        return None
+    except requests.RequestException as e:
+        logger.error(f"Fehler beim Abrufen der URL: {url}, Fehler: {e}")
+        return None
+
+# Deine Scraping-Funktion für Scout24
 def scrape_scout24():
+    logger.debug("Starte Scraping für Scout24...")
     url = "https://www.scout24.de/immobilien"
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-    }
-    
-    response = requests.get(url, headers=headers)
-    soup = BeautifulSoup(response.content, 'html.parser')
-
-    inserate = []
-
-    for item in soup.find_all('div', class_='result-list-entry'):
-        title = item.find('a', class_='result-list-entry__brand-title').text.strip()
-        price = item.find('div', class_='result-list-entry__price').text.strip()
-        location = item.find('div', class_='result-list-entry__location').text.strip()
-        link = item.find('a', class_='result-list-entry__brand-title')['href']
-        
-        inserate.append({
-            'plattform': 'Scout24',
-            'titel': title,
-            'preis': price,
-            'ort': location,
-            'link': f"https://www.scout24.de{link}"
-        })
-
-    return inserate
+    response = fetch_with_timeout(url)
+    if response:
+        logger.debug("Erfolgreich Daten von Scout24 abgerufen")
+        # Verarbeite die Antwort hier
+    else:
+        logger.error("Fehler beim Abrufen von Daten von Scout24")
+    # Beispiel-Daten
+    daten = [
+        {"plattform": "Scout24", "link": "https://www.scout24.de/immobilien", "titel": "Beispiel-Inserat"}
+    ]
+    return daten

@@ -1,29 +1,38 @@
 import requests
 from bs4 import BeautifulSoup
+import logging
 
-def scrape_willhaben():
-    url = "https://www.willhaben.at/iad/immobilien/immobiliensuche"
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-    }
-    
-    response = requests.get(url, headers=headers)
-    soup = BeautifulSoup(response.content, 'html.parser')
+logger = logging.getLogger(__name__)
 
-    inserate = []
+def scrape_willhaben(search_query, price_from, price_to, estate_type, area_id, min_area, max_area, min_rooms, max_rooms, must_have_keywords, must_not_have_keywords, max_results):
+    base_url = "https://www.willhaben.at/iad/immobilien/"
 
-    for item in soup.find_all('div', class_='result-item'):  # Beispielhafte Klasse für ein Inserat
-        title = item.find('h2', class_='title-class').text.strip()
-        price = item.find('span', class_='price-class').text.strip()
-        location = item.find('span', class_='location-class').text.strip()
-        link = item.find('a', class_='link-class')['href']
+    # Erstelle die Such-URL mit den Filterkriterien
+    search_url = f"{base_url}?SORT=0&ISPRIVATE=1&PRICE_FROM={price_from}&PRICE_TO={price_to}&PROPERTY_TYPE={estate_type}&areaId={area_id}&ESTATE_SIZE_FROM={min_area}&ESTATE_SIZE_TO={max_area}&ROOMS_FROM={min_rooms}&ROOMS_TO={max_rooms}&keyword={search_query}"
+
+    logger.debug("Search URL: %s", search_url)
+
+    response = requests.get(search_url)
+    soup = BeautifulSoup(response.content, "html.parser")
+
+    listings = []
+
+    for item in soup.find_all('div', class_='search-result-entry', limit=max_results):
+        title = item.find('h2', class_='header').get_text(strip=True)
+        url = item.find('a', class_='link')['href']
+        price = item.find('div', class_='price').get_text(strip=True)
+        location = item.find('div', class_='location').get_text(strip=True)
+        size = item.find('div', class_='size').get_text(strip=True)
+        rooms = item.find('div', class_='rooms').get_text(strip=True)
         
-        inserate.append({
-            'plattform': 'Willhaben',
-            'titel': title,
-            'preis': price,
-            'ort': location,
-            'link': f"https://www.willhaben.at{link}"
+        listings.append({
+            'title': title,
+            'url': f"https://www.willhaben.at{url}",
+            'price': price,
+            'location': location,
+            'size': size,
+            'rooms': rooms
         })
 
-    return inserate
+    logger.debug("Scraped %d listings from Willhaben", len(listings))
+    return listings
