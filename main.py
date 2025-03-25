@@ -3,6 +3,8 @@ import os
 import requests
 from scrapers.willhaben import scrape_willhaben
 from scrapers.immowelt import scrape_immowelt
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
 # Logging konfigurieren
 logging.basicConfig(level=logging.INFO)
@@ -10,71 +12,83 @@ logger = logging.getLogger(__name__)
 
 # Telegram-Bot-Tokens und Chat-ID aus Umgebungsvariablen lesen
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
-# Funktion zum Senden von Telegram-Nachrichten mit Inline-Keyboard
-def send_telegram_message(token, chat_id, message, inline_keyboard):
-    try:
-        url = f'https://api.telegram.org/bot{token}/sendMessage'
-        payload = {
-            'chat_id': chat_id,
-            'text': message,
-            'parse_mode': 'Markdown',
-            'reply_markup': {'inline_keyboard': inline_keyboard}
-        }
-        response = requests.post(url, json=payload)
-        if response.status_code == 200:
-            logger.info(f"Nachricht erfolgreich gesendet: {message}")
+# Standardkriterien
+DEFAULT_CRITERIA = {
+    "search_query": "",
+    "price_from": 0,
+    "price_to": 1000,
+    "estate_type": 2,
+    "area_id": 1010,
+    "min_area": 60,
+    "max_area": 200,
+    "min_rooms": 3,
+    "max_rooms": 5,
+    "must_have_keywords": "",
+    "must_not_have_keywords": "",
+    "max_results": 10
+}
+
+# Benutzerdefinierte Kriterien speichern
+user_criteria = {}
+
+# Start-Befehl
+def start(update: Update, context: CallbackContext):
+    update.message.reply_text("Willkommen! Geben Sie Ihre Suchkriterien ein.")
+
+# Nachricht behandeln
+def handle_message(update: Update, context: CallbackContext):
+    text = update.message.text
+    chat_id = update.message.chat_id
+
+    # Kriterien speichern oder Standardkriterien verwenden
+    if text.startswith('/criteria'):
+        criteria = text.split()[1:]
+        if len(criteria) == 10:  # Überprüfen, ob alle erforderlichen Kriterien angegeben sind
+            user_criteria[chat_id] = {
+                "search_query": criteria[0],
+                "price_from": int(criteria[1]),
+                "price_to": int(criteria[2]),
+                "estate_type": int(criteria[3]),
+                "area_id": int(criteria[4]),
+                "min_area": int(criteria[5]),
+                "max_area": int(criteria[6]),
+                "min_rooms": int(criteria[7]),
+                "max_rooms": int(criteria[8]),
+                "must_have_keywords": criteria[9],
+                "must_not_have_keywords": "",
+                "max_results": 10
+            }
+            update.message.reply_text("Kriterien gespeichert.")
         else:
-            logger.error(f"Fehler beim Senden der Nachricht: {response.text}")
-    except Exception as e:
-        logger.error(f"Exception beim Senden der Nachricht: {e}")
+            update.message.reply_text("Bitte geben Sie alle zehn Kriterien in der folgenden Reihenfolge ein: /criteria [search_query] [price_from] [price_to] [estate_type] [area_id] [min_area] [max_area] [min_rooms] [max_rooms] [must_have_keywords]")
+    else:
+        criteria = user_criteria.get(chat_id, DEFAULT_CRITERIA)
+        results = scrape_willhaben(**criteria)
+        if results:
+            for result in results:
+                message = (
+                    f"🏠 *{result['title']}*\n"
+                    f"📍 {result['location']}\n"
+                    f"💰 {result['price']}\n"
+                    f"📏 {result['size']} m²\n"
+                    f"🏢 {result['rooms']} Zimmer\n"
+                    f"🔗 [Zum Inserat]({result['url']})"
+                )
+                update.message.reply_text(message, parse_mode='Markdown')
+        else:
+            update.message.reply_text("Keine Ergebnisse gefunden.")
 
-# Duplikate basierend auf Link und Plattform filtern
-def remove_duplicates(entries):
-    seen = set()
-    unique = []
-    for e in entries:
-        identifier = (e.get('link'), e.get('plattform'))
-        if identifier not in seen:
-            seen.add(identifier)
-            unique.append(e)
-    return unique
+# Hauptfunktion
+def main():
+    updater = Updater(TELEGRAM_BOT_TOKEN)
+    dp = updater.dispatcher
 
-# Scraping durchführen und Ergebnisse filtern
-def scrape_and_filter():
-    logger.info("Starte Scraper für alle Plattformen...")
-    daten = []
-    daten += scrape_willhaben()
-    logger.info("Daten von Willhaben: %d Einträge", len(daten))
-    daten += scrape_immowelt()
-    logger.info("Daten von Immowelt: %d Einträge", len(daten))
-    # daten += scrape_scout24()  # Vorübergehend auskommentiert
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
 
-    unique = remove_duplicates(daten)
-    logger.info("Einzigartige Inserate gefunden: %d", len(unique))
-    
-    # Nachrichten mit detaillierten Informationen und Inline-Keyboard erstellen
-    for entry in unique:
-        message = (
-            f"🏠 *{entry.get('title')}*\n"
-            f"📍 {entry.get('location')}\n"
-            f"💰 {entry.get('price')}\n"
-            f"📏 {entry.get('size')} m²\n"
-            f"🛏️ {entry.get('rooms')} Zimmer\n"
-            f"🔗 [Zum Inserat]({entry.get('link')})\n"
-            f"🟢 Plattform: {entry.get('plattform')}"
-        )
-        
-        inline_keyboard = [
-            [{'text': '✅ Anfrage senden', 'callback_data': 'anfrage_senden'}],
-            [{'text': '✏️ Nachricht bearbeiten', 'callback_data': 'nachricht_bearbeiten'}],
-            [{'text': '❌ Ignorieren', 'callback_data': 'ignorieren'}]
-        ]
-        
-        send_telegram_message(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, message, inline_keyboard)
-    
-    return unique
+    updater.start_polling()
+    updater.idle()
 
 if __name__ == "__main__":
-    scrape_and_filter()
+    main()
