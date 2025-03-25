@@ -8,7 +8,7 @@ def scrape_willhaben(search_query, price_from, price_to, estate_type, area_id, m
     base_url = "https://www.willhaben.at/iad/immobilien/"
 
     # Erstelle die Such-URL mit den Filterkriterien
-    search_url = f"{base_url}?SORT=0&ISPRIVATE=1&PRICE_FROM={price_from}&PRICE_TO={price_to}&PROPERTY_TYPE={estate_type}&areaId={area_id}&ESTATE_SIZE_FROM={min_area}&ESTATE_SIZE_TO={max_area}&ROOMS_FROM={min_rooms}&ROOMS_TO={max_rooms}&keyword={search_query}"
+    search_url = f"{base_url}?SORT=0&ISPRIVATE=1&PRICE_FROM={price_from}&PRICE_TO={price_to}&PROPERTY_TYPE={estate_type}&areaId={area_id}&ESTATE_SIZE_FROM={min_area}&ESTATE_SIZE_TO={max_area}&ROOMS_FROM={min_rooms}&ROOMS_TO={max_rooms}&KEYWORDS={search_query}&EXCLUDE_KEYWORDS={must_not_have_keywords}"
 
     logger.debug("Search URL: %s", search_url)
 
