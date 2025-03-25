@@ -1,30 +1,54 @@
-❌ PROBLEM 1: Willhaben-Scraper – keine Einträge
+import requests
+from bs4 import BeautifulSoup
+import logging
 
-Fehlerhafte Selektoren + veraltete Klassen
+logger = logging.getLogger(__name__)
 
-for item in soup.find_all('div', class_='search-result-entry'):
+def scrape_willhaben():
+    url = "https://www.willhaben.at/iad/immobilien/mietwohnungen/wien"
 
-    Diese Klasse existiert nicht mehr auf willhaben.at.
+    response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
+    soup = BeautifulSoup(response.text, "html.parser")
 
-    Auch andere Selektoren wie 'h2.header', 'div.location', 'div.price', usw. sind nicht korrekt.
+    results = []
+    listings = soup.select("div[data-cy='search.resultlist.entry']")
 
-🔧 Lösung: Die aktuelle Struktur von Willhaben benötigt:
+    for item in listings:
+        try:
+            title_tag = item.select_one("h3")
+            title = title_tag.text.strip() if title_tag else "Keine Angabe"
 
-    div mit Attribut data-cy="search.resultlist" als Container
+            link_tag = item.find("a", href=True)
+            link = "https://www.willhaben.at" + link_tag["href"] if link_tag else ""
 
-    Innerhalb: div mit data-cy="search.resultlist.entry" (für jeden Eintrag)
+            ort_tag = item.select_one("div[itemprop='address']")
+            ort = ort_tag.text.strip() if ort_tag else "Keine Angabe"
 
-Die relevanten Daten (Preis, Größe, Zimmer, Link etc.) müssen aus verschachtelten <a>, <h3>, <span> usw. extrahiert werden – teils auch mit regulären Ausdrücken oder über Attribute.
-❌ PROBLEM 2: Immowelt-Scraper – None-Werte
+            preis_tag = item.select_one("div[data-cy='search.resultlist.entry.price']")
+            preis = preis_tag.text.strip() if preis_tag else "Keine Angabe"
 
-Grund: Die Klassen im HTML stimmen nicht mehr mit dem Code überein:
+            details = item.select("li")
+            flaeche = "Keine Angabe"
+            zimmer = "Keine Angabe"
+            for d in details:
+                txt = d.text.strip()
+                if "m²" in txt and flaeche == "Keine Angabe":
+                    flaeche = txt.replace("m²", "").strip()
+                elif "Zimmer" in txt and zimmer == "Keine Angabe":
+                    zimmer = txt.replace("Zimmer", "").strip()
 
-item.find('h2', class_='result-list-entry__brand-title')  # ❌ existiert nicht mehr
+            results.append({
+                "titel": title,
+                "ort": ort,
+                "preis": preis,
+                "qm": flaeche,
+                "zimmer": zimmer,
+                "link": link,
+                "plattform": "Willhaben"
+            })
+        except Exception as e:
+            logger.warning(f"Fehler beim Verarbeiten eines Willhaben-Eintrags: {e}")
+            continue
 
-Auch hier sind z. B. die tatsächlichen Strukturen:
-
-    'div[data-test="object-listing"]' für einzelne Einträge
-
-    Innerhalb: andere moderne CSS-Klassen oder data-* Attribute
-
-🔧 Lösung: Selektoren müssen an den aktuellen HTML-Baum angepasst werden. Sonst wird nichts gefunden → deshalb None.
+    logger.debug(f"Erfolgreich Daten von Willhaben abgerufen: {len(results)} Einträge")
+    return results
