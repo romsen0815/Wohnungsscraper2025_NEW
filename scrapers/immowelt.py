@@ -4,53 +4,43 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def scrape_willhaben(search_query="", price_from=0, price_to=1000, estate_type=2, area_id=1010, min_area=60, max_area=200, min_rooms=3, max_rooms=5, must_have_keywords="", must_not_have_keywords="", max_results=10):
-    url = "https://www.willhaben.at/iad/immobilien/"
+def scrape_immowelt(search_query="", price_from=0, price_to=1000, estate_type=1, area_id=1010, min_area=60, max_area=200, min_rooms=3, max_rooms=5, must_have_keywords="", must_not_have_keywords="", max_results=10):
+    base_url = 'https://www.immowelt.de/suche/'
+    location = "wien"  # Beispiel, kann durch Parameter ersetzt werden
+    property_type = "wohnung"  # Beispiel, kann durch Parameter ersetzt werden
+    action = "mieten"  # Beispiel, kann durch Parameter ersetzt werden
 
-    params = {
-        'SORT': 0,
-        'ISPRIVATE': 1,
-        'PRICE_FROM': price_from,
-        'PRICE_TO': price_to,
-        'PROPERTY_TYPE': estate_type,
-        'areaId': area_id,
-        'ESTATE_SIZE_FROM': min_area,
-        'ESTATE_SIZE_TO': max_area,
-        'ROOMS_FROM': min_rooms,
-        'ROOMS_TO': max_rooms,
-        'KEYWORDS': search_query,
-        'EXCLUDE_KEYWORDS': must_not_have_keywords,
-    }
-
-    response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, params=params)
-    soup = BeautifulSoup(response.text, "html.parser")
-
+    url = f"{base_url}{location}/{property_type}/{action}"
+    
+    response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
+    soup = BeautifulSoup(response.text, 'html.parser')
+    
     results = []
-    listings = soup.select("div[class^='Box-sc'] a[href*='/iad/immobilien/']")  # Aktualisierter Selektor
+    listings = soup.select("div[data-test='object-listing']")
 
     for item in listings:
         try:
-            title_tag = item.select_one("h3")
+            title_tag = item.select_one("h2")
             title = title_tag.text.strip() if title_tag else "Keine Angabe"
 
             link_tag = item.find("a", href=True)
-            link = "https://www.willhaben.at" + link_tag["href"] if link_tag else ""
+            link = link_tag["href"] if link_tag else ""
 
-            ort_tag = item.select_one("div[itemprop='address']")
+            ort_tag = item.select_one("div[data-test='address']")
             ort = ort_tag.text.strip() if ort_tag else "Keine Angabe"
 
-            preis_tag = item.select_one("div[data-cy='resultlist-entry-price']")
+            preis_tag = item.select_one("div[data-test='price']")
             preis = preis_tag.text.strip() if preis_tag else "Keine Angabe"
 
-            details = item.select("li")
             flaeche = "Keine Angabe"
             zimmer = "Keine Angabe"
+            details = item.select("div[data-test='additional-info'] span")
             for d in details:
                 txt = d.text.strip()
                 if "m²" in txt and flaeche == "Keine Angabe":
-                    flaeche = txt.replace("m²", "").strip()
+                    flaeche = txt
                 elif "Zimmer" in txt and zimmer == "Keine Angabe":
-                    zimmer = txt.replace("Zimmer", "").strip()
+                    zimmer = txt
 
             results.append({
                 "titel": title,
@@ -59,11 +49,11 @@ def scrape_willhaben(search_query="", price_from=0, price_to=1000, estate_type=2
                 "qm": flaeche,
                 "zimmer": zimmer,
                 "link": link,
-                "plattform": "Willhaben"
+                "plattform": "Immowelt"
             })
         except Exception as e:
-            logger.warning(f"Fehler beim Verarbeiten eines Willhaben-Eintrags: {e}")
+            logger.warning(f"Fehler beim Verarbeiten eines Immowelt-Eintrags: {e}")
             continue
 
-    logger.debug(f"Erfolgreich Daten von Willhaben abgerufen: {len(results)} Einträge")
+    logger.debug(f"Erfolgreich Daten von Immowelt abgerufen: {len(results)} Einträge")
     return results
