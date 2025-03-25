@@ -130,5 +130,3 @@ if __name__ == "__main__":
 
 3. **Logging-Überprüfung**:
    - Überprüfen Sie die Logs auf eventuelle Fehler oder Warnungen.
-
-Durch diese Schritte kann sichergestellt werden, dass die Funktion `scrape_willhaben` mit den erforderlichen Argumenten aufgerufen wird und die Fehlermeldung behoben ist.
