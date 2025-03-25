@@ -1,38 +1,94 @@
-import requests
-from bs4 import BeautifulSoup
 import logging
+import os
+import requests
+from scrapers.willhaben import scrape_willhaben
+from scrapers.immowelt import scrape_immowelt
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
+# Logging konfigurieren
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def scrape_willhaben(search_query, price_from, price_to, estate_type, area_id, min_area, max_area, min_rooms, max_rooms, must_have_keywords, must_not_have_keywords, max_results):
-    base_url = "https://www.willhaben.at/iad/immobilien/"
+# Telegram-Bot-Tokens und Chat-ID aus Umgebungsvariablen lesen
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 
-    # Erstelle die Such-URL mit den Filterkriterien
-    search_url = f"{base_url}?SORT=0&ISPRIVATE=1&PRICE_FROM={price_from}&PRICE_TO={price_to}&PROPERTY_TYPE={estate_type}&areaId={area_id}&ESTATE_SIZE_FROM={min_area}&ESTATE_SIZE_TO={max_area}&ROOMS_FROM={min_rooms}&ROOMS_TO={max_rooms}&KEYWORDS={search_query}&EXCLUDE_KEYWORDS={must_not_have_keywords}"
+# Standardkriterien
+DEFAULT_CRITERIA = {
+    "search_query": "",
+    "price_from": 0,
+    "price_to": 1000,
+    "estate_type": 2,
+    "area_id": 1010,
+    "min_area": 60,
+    "max_area": 200,
+    "min_rooms": 3,
+    "max_rooms": 5,
+    "must_have_keywords": "",
+    "must_not_have_keywords": "",
+    "max_results": 10
+}
 
-    logger.debug("Search URL: %s", search_url)
+# Benutzerdefinierte Kriterien speichern
+user_criteria = {}
 
-    response = requests.get(search_url)
-    soup = BeautifulSoup(response.content, "html.parser")
+# Start-Befehl
+def start(update: Update, context: CallbackContext):
+    update.message.reply_text("Willkommen! Geben Sie Ihre Suchkriterien ein.")
 
-    listings = []
+# Nachricht behandeln
+def handle_message(update: Update, context: CallbackContext):
+    text = update.message.text
+    chat_id = update.message.chat_id
 
-    for item in soup.find_all('div', class_='search-result-entry', limit=max_results):
-        title = item.find('h2', class_='header').get_text(strip=True)
-        url = item.find('a', class_='link')['href']
-        price = item.find('div', class_='price').get_text(strip=True)
-        location = item.find('div', class_='location').get_text(strip=True)
-        size = item.find('div', class_='size').get_text(strip=True)
-        rooms = item.find('div', class_='rooms').get_text(strip=True)
-        
-        listings.append({
-            'title': title,
-            'url': f"https://www.willhaben.at{url}",
-            'price': price,
-            'location': location,
-            'size': size,
-            'rooms': rooms
-        })
+    # Kriterien speichern oder Standardkriterien verwenden
+    if text.startswith('/criteria'):
+        criteria = text.split()[1:]
+        if len(criteria) == 10:  # Überprüfen, ob alle erforderlichen Kriterien angegeben sind
+            user_criteria[chat_id] = {
+                "search_query": criteria[0],
+                "price_from": int(criteria[1]),
+                "price_to": int(criteria[2]),
+                "estate_type": int(criteria[3]),
+                "area_id": int(criteria[4]),
+                "min_area": int(criteria[5]),
+                "max_area": int(criteria[6]),
+                "min_rooms": int(criteria[7]),
+                "max_rooms": int(criteria[8]),
+                "must_have_keywords": criteria[9],
+                "must_not_have_keywords": "",
+                "max_results": 10
+            }
+            update.message.reply_text("Kriterien gespeichert.")
+        else:
+            update.message.reply_text("Bitte geben Sie alle zehn Kriterien in der folgenden Reihenfolge ein: /criteria [search_query] [price_from] [price_to] [estate_type] [area_id] [min_area] [max_area] [min_rooms] [max_rooms] [must_have_keywords]")
+    else:
+        criteria = user_criteria.get(chat_id, DEFAULT_CRITERIA)
+        results = scrape_willhaben(**criteria)
+        if results:
+            for result in results:
+                message = (
+                    f"🏠 *{result['title']}*\n"
+                    f"📍 {result['location']}\n"
+                    f"💰 {result['price']}\n"
+                    f"📏 {result['size']} m²\n"
+                    f"🏢 {result['rooms']} Zimmer\n"
+                    f"🔗 [Zum Inserat]({result['url']})"
+                )
+                update.message.reply_text(message, parse_mode='Markdown')
+        else:
+            update.message.reply_text("Keine Ergebnisse gefunden.")
 
-    logger.debug("Scraped %d listings from Willhaben", len(listings))
-    return listings
+# Hauptfunktion
+def main():
+    updater = Updater(TELEGRAM_BOT_TOKEN)
+    dp = updater.dispatcher
+
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+
+    updater.start_polling()
+    updater.idle()
+
+if __name__ == "__main__":
+    main()
