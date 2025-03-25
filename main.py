@@ -3,6 +3,8 @@ import os
 import requests
 from scrapers.willhaben import scrape_willhaben
 from scrapers.immowelt import scrape_immowelt
+from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackContext
+from telegram import filters
 
 # Logging konfigurieren
 logging.basicConfig(level=logging.INFO)
@@ -114,19 +116,3 @@ def scrape_and_filter():
 
 if __name__ == "__main__":
     scrape_and_filter()
-````
-
-### Überprüfung der Lösung
-
-1. **Lokale Tests**:
-   - Führen Sie das Skript lokal aus, um zu überprüfen, ob es die erwarteten Ergebnisse liefert.
-   - Testen Sie sowohl mit Standardkriterien als auch mit benutzerdefinierten Kriterien.
-
-2. **Integrationstest**:
-   - Führen Sie den Bot in einer echten Telegram-Umgebung aus und testen Sie verschiedene Szenarien:
-     - Ohne benutzerdefinierte Kriterien.
-     - Mit benutzerdefinierten Kriterien.
-   - Überprüfen Sie, ob die Ergebnisse korrekt zurückgegeben werden.
-
-3. **Logging-Überprüfung**:
-   - Überprüfen Sie die Logs auf eventuelle Fehler oder Warnungen.
