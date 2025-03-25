@@ -64,5 +64,3 @@ if __name__ == "__main__":
     for eintrag in daten:
         print(eintrag)
 ````
-
-Jetzt können wir den nächsten Schritt machen und die anderen Dateien überprüfen.
