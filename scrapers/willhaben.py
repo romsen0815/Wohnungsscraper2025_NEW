@@ -4,10 +4,25 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def scrape_willhaben():
+def scrape_willhaben(search_query="", price_from=0, price_to=1000, estate_type=2, area_id=1010, min_area=60, max_area=200, min_rooms=3, max_rooms=5, must_have_keywords="", must_not_have_keywords="", max_results=10):
     url = "https://www.willhaben.at/iad/immobilien/mietwohnungen/wien"
 
-    response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
+    params = {
+        'SORT': 0,
+        'ISPRIVATE': 1,
+        'PRICE_FROM': price_from,
+        'PRICE_TO': price_to,
+        'PROPERTY_TYPE': estate_type,
+        'areaId': area_id,
+        'ESTATE_SIZE_FROM': min_area,
+        'ESTATE_SIZE_TO': max_area,
+        'ROOMS_FROM': min_rooms,
+        'ROOMS_TO': max_rooms,
+        'KEYWORDS': search_query,
+        'EXCLUDE_KEYWORDS': must_not_have_keywords,
+    }
+
+    response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, params=params)
     soup = BeautifulSoup(response.text, "html.parser")
 
     results = []
