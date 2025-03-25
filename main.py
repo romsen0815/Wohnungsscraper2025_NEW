@@ -63,4 +63,3 @@ if __name__ == "__main__":
     daten = scrape_and_filter()
     for eintrag in daten:
         print(eintrag)
-````
