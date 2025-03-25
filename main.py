@@ -3,8 +3,7 @@ import os
 import requests
 from scrapers.willhaben import scrape_willhaben
 from scrapers.immowelt import scrape_immowelt
-from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackContext
-from telegram import filters
+from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackContext, filters
 
 # Logging konfigurieren
 logging.basicConfig(level=logging.INFO)
