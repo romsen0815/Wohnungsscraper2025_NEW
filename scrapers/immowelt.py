@@ -1,36 +1,33 @@
-import logging
 import requests
-from requests.exceptions import Timeout
+from bs4 import BeautifulSoup
+import logging
 
-# Logging konfigurieren
-logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# Funktion zum Abrufen von Daten mit Timeout
-def fetch_with_timeout(url):
-    try:
-        response = requests.get(url, timeout=10)  # 10 Sekunden Timeout
-        response.raise_for_status()  # HTTP-Fehler (falls vorhanden) auslösen
-        return response.text
-    except Timeout:
-        logger.error(f"Timeout beim Abrufen der URL: {url}")
-        return None
-    except requests.RequestException as e:
-        logger.error(f"Fehler beim Abrufen der URL: {url}, Fehler: {e}")
-        return None
-
-# Deine Scraping-Funktion für Immowelt
 def scrape_immowelt():
-    logger.debug("Starte Scraping für Immowelt...")
-    url = "https://www.immowelt.de/liste/berlin/haeuser/kaufen"
-    response = fetch_with_timeout(url)
-    if response:
-        logger.debug("Erfolgreich Daten von Immowelt abgerufen")
-        # Verarbeite die Antwort hier
-    else:
-        logger.error("Fehler beim Abrufen von Daten von Immowelt")
-    # Beispiel-Daten
-    daten = [
-        {"plattform": "Immowelt", "link": "https://www.immowelt.de/liste/berlin/haeuser/kaufen", "titel": "Beispiel-Inserat"}
-    ]
-    return daten
+    url = 'https://www.immowelt.de/suche/berlin/haeuser/kaufen'
+    
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    
+    results = []
+    for item in soup.find_all('div', class_='search-result-entry'):
+        title = item.find('h2', class_='result-list-entry__brand-title').text.strip()
+        location = item.find('div', class_='result-list-entry__address').text.strip()
+        price = item.find('div', class_='result-list-entry__criteria').text.strip()
+        size = item.find('div', class_='result-list-entry__criteria--area').text.strip()
+        rooms = item.find('div', class_='result-list-entry__criteria--rooms').text.strip()
+        link = item.find('a', class_='result-list-entry__brand-title-container')['href']
+        
+        results.append({
+            'title': title,
+            'location': location,
+            'price': price,
+            'size': size,
+            'rooms': rooms,
+            'link': link,
+            'plattform': 'Immowelt'
+        })
+    
+    logger.debug(f"Erfolgreich Daten von Immowelt abgerufen: {len(results)} Einträge")
+    return results
