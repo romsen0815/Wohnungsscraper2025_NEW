@@ -5,9 +5,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 def scrape_immowelt(search_query="", price_from=0, price_to=1000, estate_type=1, area_id=1010, min_area=60, max_area=200, min_rooms=3, max_rooms=5, must_have_keywords="", must_not_have_keywords="", max_results=10):
-    base_url = 'https://www.immowelt.de/suche/'
+    base_url = 'https://www.immowelt.at/liste/'
     location = "wien"  # Beispiel, kann durch Parameter ersetzt werden
-    property_type = "wohnung"  # Beispiel, kann durch Parameter ersetzt werden
+    property_type = "wohnungen"  # Beispiel, kann durch Parameter ersetzt werden
     action = "mieten"  # Beispiel, kann durch Parameter ersetzt werden
 
     url = f"{base_url}{location}/{property_type}/{action}"
